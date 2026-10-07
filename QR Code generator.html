@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>QR Code Generator</title>
+    <style>
+        :root {
+            --sky-top: #5ec2ff;
+            --sky-mid: #b8ecff;
+            --sky-bottom: #d9f7c9;
+            --glass: rgb(255 255 255 / 0.38);
+            --glass-edge: rgb(255 255 255 / 0.75);
+            --text: #0b3a52;
+            --muted: #2c6279;
+            --accent-top: #66d9ff;
+            --accent-bottom: #0a8fd6;
+            --accent-edge: #0a6aa6;
+            --error: #b3261e;
+            --radius: 18px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --sky-top: #06223a;
+                --sky-mid: #0b4a6b;
+                --sky-bottom: #0f6f6a;
+                --glass: rgb(255 255 255 / 0.12);
+                --glass-edge: rgb(255 255 255 / 0.35);
+                --text: #e8f8ff;
+                --muted: #a7d4e6;
+                --error: #ff9c94;
+            }
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            position: relative;
+            margin: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+            overflow: hidden;
+            color: var(--text);
+            font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+            line-height: 1.5;
+            background:
+                radial-gradient(ellipse 80% 40% at 50% 105%, rgb(150 235 120 / 0.55), transparent 70%),
+                linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bottom) 100%);
+        }
+
+        /* Decorative bubbles */
+        body::before,
+        body::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 30% 28%, rgb(255 255 255 / 0.95) 0 8%, transparent 22%),
+                radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.04) 55%, rgb(255 255 255 / 0.5) 100%);
+            border: 1px solid rgb(255 255 255 / 0.6);
+            box-shadow: inset 0 -8px 18px rgb(120 220 255 / 0.35);
+        }
+
+        body::before {
+            width: 14rem;
+            height: 14rem;
+            left: -3rem;
+            bottom: 8%;
+        }
+
+        body::after {
+            width: 8rem;
+            height: 8rem;
+            right: 6%;
+            top: 7%;
+        }
+
+        .card {
+            position: relative;
+            width: min(100%, 26rem);
+            padding: 2rem 1.5rem;
+            background: linear-gradient(160deg, rgb(255 255 255 / 0.55), var(--glass) 40%);
+            border: 1px solid var(--glass-edge);
+            border-radius: var(--radius);
+            -webkit-backdrop-filter: blur(14px) saturate(1.4);
+            backdrop-filter: blur(14px) saturate(1.4);
+            box-shadow:
+                0 12px 40px rgb(0 70 110 / 0.25),
+                inset 0 1px 0 rgb(255 255 255 / 0.9),
+                inset 0 0 0 1px rgb(255 255 255 / 0.25);
+        }
+
+        /* Glossy highlight across the top half of the glass */
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 50% 0;
+            border-radius: var(--radius) var(--radius) 60% 60% / var(--radius) var(--radius) 22px 22px;
+            background: linear-gradient(180deg, rgb(255 255 255 / 0.35), rgb(255 255 255 / 0));
+            pointer-events: none;
+        }
+
+        .card > * {
+            position: relative;
+        }
+
+        h1 {
+            margin: 0 0 1.25rem;
+            font-size: 1.6rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            text-shadow: 0 1px 0 rgb(255 255 255 / 0.8), 0 0 14px rgb(255 255 255 / 0.6);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .field {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        input,
+        button,
+        .download {
+            font: inherit;
+            border-radius: 12px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 0.65rem 0.8rem;
+            color: var(--text);
+            background: rgb(255 255 255 / 0.7);
+            border: 1px solid rgb(255 255 255 / 0.9);
+            box-shadow: inset 0 2px 5px rgb(0 70 110 / 0.18);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            input {
+                background: rgb(255 255 255 / 0.12);
+                border-color: rgb(255 255 255 / 0.3);
+            }
+        }
+
+        input::placeholder {
+            color: var(--muted);
+            opacity: 0.8;
+        }
+
+        /* Classic Aero glossy button: lighter top half, deeper bottom half */
+        button {
+            position: relative;
+            padding: 0.65rem 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            text-shadow: 0 -1px 0 rgb(0 60 100 / 0.5);
+            cursor: pointer;
+            background:
+                linear-gradient(180deg, rgb(255 255 255 / 0.55) 0 50%, rgb(255 255 255 / 0) 50%),
+                linear-gradient(180deg, var(--accent-top), var(--accent-bottom));
+            border: 1px solid var(--accent-edge);
+            box-shadow: 0 3px 8px rgb(0 90 140 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.8);
+            transition: filter 0.15s, box-shadow 0.15s;
+        }
+
+        button:hover {
+            filter: brightness(1.1) saturate(1.2);
+            box-shadow: 0 3px 14px rgb(60 200 255 / 0.7), inset 0 1px 0 rgb(255 255 255 / 0.8);
+        }
+
+        button:active {
+            filter: brightness(0.95);
+            box-shadow: inset 0 2px 6px rgb(0 60 100 / 0.5);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: progress;
+        }
+
+        :focus-visible {
+            outline: 3px solid #fff;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 5px rgb(10 143 214 / 0.8);
+        }
+
+        .error {
+            margin: 0.6rem 0 0;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.9rem;
+            color: var(--error);
+            background: rgb(255 255 255 / 0.6);
+            border-radius: 10px;
+        }
+
+        .result {
+            margin: 1.5rem 0 0;
+            display: grid;
+            justify-items: center;
+            gap: 1rem;
+            animation: reveal 0.3s ease-out;
+        }
+
+        /* QR codes need a light background to scan reliably, even in dark mode */
+        .qr-tile {
+            padding: 0.75rem;
+            background: #fff;
+            border: 1px solid rgb(255 255 255 / 0.9);
+            border-radius: var(--radius);
+            box-shadow: 0 6px 20px rgb(0 70 110 / 0.3), inset 0 0 0 1px rgb(10 143 214 / 0.15);
+        }
+
+        .qr-tile img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .download {
+            padding: 0.5rem 1rem;
+            color: var(--text);
+            text-decoration: none;
+            background: linear-gradient(180deg, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.4));
+            border: 1px solid rgb(255 255 255 / 0.9);
+            box-shadow: 0 2px 6px rgb(0 70 110 / 0.2);
+        }
+
+        .download:hover {
+            background: rgb(255 255 255 / 0.95);
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        @keyframes reveal {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .result {
+                animation: none;
+            }
+
+            button {
+                transition: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <h1>QR Code Generator</h1>
+
+        <form id="qrcode-form" novalidate>
+            <label for="qrcode-url">Link or text</label>
+            <div class="field">
+                <input type="text" id="qrcode-url" placeholder="https://example.com"
+                       autocomplete="url" autofocus required>
+                <button type="submit" id="qrcode-button">Generate</button>
+            </div>
+            <p id="qrcode-error" class="error" role="alert" hidden></p>
+        </form>
+
+        <figure id="qrcode-result" class="result" hidden>
+            <div class="qr-tile">
+                <img id="qrcode-image" alt="QR code for the text you entered" width="260" height="260">
+            </div>
+            <a id="qrcode-download" class="download" download="qrcode.png">Download PNG</a>
+        </figure>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.4.4/qrcode.min.js" integrity="sha512-6x997BOv0e4O+G45Cwr4PZMYXP0ATChLcSob5IB6DPpXvDfRDMBFClXOg5ahmIVBoAf2tnsENpkHRJckceZiwQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        // A data URL is a text representation of a file, so the generated QR code
+        // can be used directly as an <img> source without saving anything to disk.
+
+        const form = document.getElementById("qrcode-form");
+        const input = document.getElementById("qrcode-url");
+        const button = document.getElementById("qrcode-button");
+        const image = document.getElementById("qrcode-image");
+        const result = document.getElementById("qrcode-result");
+        const download = document.getElementById("qrcode-download");
+        const errorMessage = document.getElementById("qrcode-error");
+
+        const QR_OPTIONS = {
+            width: 520,              // rendered at 260px; 2x keeps it sharp on high-DPI screens
+            margin: 1,
+            errorCorrectionLevel: "M",
+        };
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.hidden = false;
+            result.hidden = true;
+        }
+
+        function clearError() {
+            errorMessage.hidden = true;
+        }
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            clearError();
+
+            const text = input.value.trim();
+            if (!text) {
+                showError("Enter a link or some text to turn into a QR code.");
+                input.focus();
+                return;
+            }
+
+            button.disabled = true;
+
+            try {
+                const dataURL = await QRCode.toDataURL(text, QR_OPTIONS);
+                image.src = dataURL;
+                download.href = dataURL;
+                result.hidden = false;
+            } catch (error) {
+                console.error(error);
+                showError("Couldn't create a QR code from that. Try shorter text.");
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        // Hide a stale result as soon as the person starts editing the input
+        input.addEventListener("input", () => {
+            result.hidden = true;
+            clearError();
+        });
+    </script>
+</body>
+</html>
